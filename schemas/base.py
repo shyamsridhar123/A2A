@@ -4,54 +4,189 @@ from datetime import datetime
 from enum import Enum
 
 
-class ContentType(str, Enum):
+class TaskState(str, Enum):
+    """Task states as defined in the A2A protocol."""
+    SUBMITTED = "submitted"
+    WORKING = "working"
+    INPUT_REQUIRED = "input-required"
+    COMPLETED = "completed"
+    CANCELED = "canceled"
+    FAILED = "failed"
+    UNKNOWN = "unknown"
+
+
+class PartType(str, Enum):
+    """Part types as defined in the A2A protocol."""
     TEXT = "text"
-    JSON = "json"
-    BINARY = "binary"
-    AUDIO = "audio"
-    IMAGE = "image"
-    VIDEO = "video"
+    FILE = "file"
+    DATA = "data"
 
 
-class Content(BaseModel):
-    type: ContentType = Field(..., description="The type of content")
-    value: Any = Field(..., description="The content value")
+class MessageRole(str, Enum):
+    """Role types for messages as defined in the A2A protocol."""
+    USER = "user"
+    AGENT = "agent"
+
+
+class Part(BaseModel):
+    """Base class for all part types."""
+    type: PartType
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class TextPart(Part):
+    """Text part as defined in the A2A protocol."""
+    type: PartType = PartType.TEXT
+    text: str
+
+
+class FileContent(BaseModel):
+    """File content as defined in the A2A protocol."""
+    name: Optional[str] = None
+    mimeType: Optional[str] = None
+    bytes: Optional[str] = None
+    uri: Optional[str] = None
+
+
+class FilePart(Part):
+    """File part as defined in the A2A protocol."""
+    type: PartType = PartType.FILE
+    file: FileContent
+
+
+class DataPart(Part):
+    """Data part as defined in the A2A protocol."""
+    type: PartType = PartType.DATA
+    data: Dict[str, Any]
 
 
 class Message(BaseModel):
-    id: str = Field(..., description="Unique message identifier")
-    sender_id: str = Field(..., description="ID of the sending agent")
-    recipient_id: str = Field(..., description="ID of the receiving agent")
-    content: List[Content] = Field(..., description="List of content items")
-    timestamp: datetime = Field(default_factory=datetime.utcnow, description="When the message was created")
-    metadata: Dict[str, Any] = Field(default_factory=dict, description="Optional metadata")
-    in_reply_to: Optional[str] = Field(None, description="ID of the message this is a reply to")
-    sequence_num: Optional[int] = Field(None, description="Position of this message in a sequence")
+    """Message as defined in the A2A protocol."""
+    role: MessageRole
+    parts: List[Union[TextPart, FilePart, DataPart]]
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class Artifact(BaseModel):
+    """Artifact as defined in the A2A protocol."""
+    name: Optional[str] = None
+    description: Optional[str] = None
+    parts: List[Union[TextPart, FilePart, DataPart]]
+    index: int = 0
+    append: Optional[bool] = None
+    lastChunk: Optional[bool] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class TaskStatus(BaseModel):
+    """Task status as defined in the A2A protocol."""
+    state: TaskState
+    message: Optional[Message] = None
+    timestamp: Optional[datetime] = None
+
+
+class Task(BaseModel):
+    """Task as defined in the A2A protocol."""
+    id: str
+    sessionId: Optional[str] = None
+    status: TaskStatus
+    artifacts: Optional[List[Artifact]] = None
+    metadata: Optional[Dict[str, Any]] = None
+
+
+class AgentCapabilities(BaseModel):
+    """Agent capabilities as defined in the A2A protocol."""
+    streaming: bool = False
+    pushNotifications: bool = False
+    stateTransitionHistory: bool = False
+
+
+class AgentProvider(BaseModel):
+    """Agent provider information as defined in the A2A protocol."""
+    organization: str
+    url: Optional[str] = None
+
+
+class AgentSkill(BaseModel):
+    """Agent skill as defined in the A2A protocol."""
+    id: str
+    name: str
+    description: Optional[str] = None
+    tags: Optional[List[str]] = None
+    examples: Optional[List[str]] = None
+    inputModes: Optional[List[str]] = None
+    outputModes: Optional[List[str]] = None
+
+
+class AgentAuthentication(BaseModel):
+    """Agent authentication schemas as defined in the A2A protocol."""
+    schemes: List[str]
+    credentials: Optional[str] = None
+
+
+class AgentCard(BaseModel):
+    """Agent card as defined in the A2A protocol."""
+    name: str
+    description: Optional[str] = None
+    url: str
+    provider: Optional[AgentProvider] = None
+    version: str
+    documentationUrl: Optional[str] = None
+    capabilities: AgentCapabilities
+    authentication: Optional[AgentAuthentication] = None
+    defaultInputModes: List[str] = ["text"]
+    defaultOutputModes: List[str] = ["text"]
+    skills: List[AgentSkill]
+
+
+# For backward compatibility
+ContentType = PartType
+
+class Content(BaseModel):
+    """Legacy content model for backward compatibility."""
+    type: ContentType
+    value: Any
+
+
+class LegacyMessage(BaseModel):
+    """Legacy message model for backward compatibility."""
+    id: str
+    sender_id: str
+    recipient_id: str
+    content: List[Content]
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    metadata: Dict[str, Any] = Field(default_factory=dict)
+    in_reply_to: Optional[str] = None
+    sequence_num: Optional[int] = None
 
 
 class FunctionCall(BaseModel):
-    function_name: str = Field(..., description="Name of the function to call")
-    arguments: Dict[str, Any] = Field(..., description="Arguments for the function")
+    """Function call as used in the A2A protocol."""
+    function_name: str
+    arguments: Dict[str, Any]
 
 
 class FunctionResult(BaseModel):
-    function_name: str = Field(..., description="Name of the function that was called")
-    result: Any = Field(..., description="Result of the function call")
-    error: Optional[str] = Field(None, description="Error message if the function call failed")
+    """Function result as used in the A2A protocol."""
+    function_name: str
+    result: Any
+    error: Optional[str] = None
 
 
 class AgentSpec(BaseModel):
-    id: str = Field(..., description="Unique identifier for the agent")
-    name: str = Field(..., description="Human-readable name of the agent")
-    description: str = Field(..., description="Description of the agent's capabilities")
-    version: str = Field(..., description="Agent version")
-    supported_protocols: List[str] = Field(default_factory=list, description="Protocols supported by the agent")
-    supported_functions: List[str] = Field(default_factory=list, description="Functions supported by the agent")
+    """Legacy agent specification for backward compatibility."""
+    id: str
+    name: str
+    description: str
+    version: str
+    supported_protocols: List[str] = []
+    supported_functions: List[str] = []
 
 
 class ConversationSession(BaseModel):
-    id: str = Field(..., description="Unique conversation identifier")
-    participants: List[str] = Field(..., description="List of agent IDs participating in the conversation")
+    """Session for tracking conversations between agents."""
+    id: str
+    participants: List[str]
     created_at: datetime = Field(default_factory=datetime.utcnow)
     metadata: Dict[str, Any] = Field(default_factory=dict)
-    messages: List[Message] = Field(default_factory=list)
+    messages: List[LegacyMessage] = []

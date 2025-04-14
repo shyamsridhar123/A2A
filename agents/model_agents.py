@@ -1,9 +1,13 @@
-from typing import Dict, List, Any
+from typing import Dict, List, Any, Optional, Union
 import json
+import schemas.base
 
 from agents.base_agent import BaseAgent
 from models.model_implementations import GPT45Model, GPTO3MiniModel
-from schemas.base import Message, ContentType
+from schemas.base import (
+    LegacyMessage as Message, ContentType, Task, TaskState, 
+    MessageRole, TextPart, DataPart, Artifact, TaskStatus
+)
 
 
 class GPT45Agent(BaseAgent):
@@ -20,14 +24,79 @@ class GPT45Agent(BaseAgent):
         ]
     
     def _process_message(self, message: Message) -> None:
-        """Process an incoming message using the GPT-4.5 model."""
+        """Process an incoming legacy message using the GPT-4.5 model."""
         print(f"GPT-4.5 Agent received: {message.id}")
         for content in message.content:
             if content.type == ContentType.TEXT:
                 print(f"Content: {content.value[:100]}...")
     
+    def _process_task(self, task: Task) -> Optional[Task]:
+        """
+        Process a task according to the A2A protocol using the GPT-4.5 model.
+        
+        Args:
+            task: The task to process
+            
+        Returns:
+            The updated task, or None if no updates are needed
+        """
+        # Extract text from all text parts in the message
+        message_text = self._extract_text_from_message(task.status.message)
+        
+        # Create prompt from message text
+        messages = [
+            {"role": "system", "content": f"You are {self.name}, {self.description}. Follow the Agent-to-Agent protocol when communicating."}
+        ]
+        
+        # Add the user's message
+        messages.append({"role": "user", "content": message_text})
+        
+        # Generate response
+        response_text = self.model.generate_text(messages, temperature=0.7)
+        
+        # Create A2A message with response
+        response_message = self.create_a2a_message(
+            role=MessageRole.AGENT,
+            text_content=response_text
+        )
+        
+        # Create artifact with the response
+        artifact = Artifact(
+            name="response",
+            description="Generated response",
+            parts=[TextPart(text=response_text)],
+            index=0
+        )
+        
+        # Update task with response
+        task = self.update_task_status(
+            task_id=task.id, 
+            state=TaskState.COMPLETED,
+            message=response_message
+        )
+        
+        # Add artifact to task
+        self.add_task_artifact(task.id, artifact)
+        
+        return task
+    
+    def _extract_text_from_message(self, message: schemas.base.Message) -> str:
+        """Extract text content from all text parts in a message."""
+        text_parts = []
+        data_parts = []
+        
+        for part in message.parts:
+            if part.type == ContentType.TEXT:
+                text_parts.append(part.text)
+            elif part.type == ContentType.DATA:
+                data_parts.append(f"JSON Data: {json.dumps(part.data, indent=2)}")
+        
+        # Combine all parts
+        all_parts = text_parts + data_parts
+        return "\n".join(all_parts) if all_parts else "No text content provided."
+    
     def generate_response(self, message: Message) -> Message:
-        """Generate a response using the GPT-4.5 model."""
+        """Generate a response using the GPT-4.5 model (legacy format)."""
         prompt = self._format_prompt_from_message(message)
         
         # Convert conversation history to OpenAI format
@@ -70,6 +139,32 @@ class GPT45Agent(BaseAgent):
                 prompt_parts.append(f"[Content of type {content.type} not directly processable as text]")
                 
         return "\n".join(prompt_parts)
+    
+    def _get_agent_skills(self) -> List[dict]:
+        """Get the skills supported by this agent for the A2A protocol."""
+        return [
+            {
+                "id": "analyze_data",
+                "name": "Data Analysis",
+                "description": "Analyze structured and unstructured data",
+                "inputModes": ["text", "data"],
+                "outputModes": ["text", "data"]
+            },
+            {
+                "id": "complex_reasoning",
+                "name": "Complex Reasoning",
+                "description": "Perform complex reasoning tasks with multiple steps",
+                "inputModes": ["text"],
+                "outputModes": ["text"]
+            },
+            {
+                "id": "task_planning",
+                "name": "Task Planning",
+                "description": "Plan and break down complex tasks",
+                "inputModes": ["text"],
+                "outputModes": ["text", "data"]
+            }
+        ]
 
 
 class GPTO3MiniAgent(BaseAgent):
@@ -86,14 +181,74 @@ class GPTO3MiniAgent(BaseAgent):
         ]
     
     def _process_message(self, message: Message) -> None:
-        """Process an incoming message using the GPT-O3 Mini model."""
+        """Process an incoming legacy message using the GPT-O3 Mini model."""
         print(f"GPT-O3 Mini Agent received: {message.id}")
         for content in message.content:
             if content.type == ContentType.TEXT:
                 print(f"Content: {content.value[:100]}...")
     
+    def _process_task(self, task: Task) -> Optional[Task]:
+        """
+        Process a task according to the A2A protocol using the GPT-O3 Mini model.
+        
+        Args:
+            task: The task to process
+            
+        Returns:
+            The updated task, or None if no updates are needed
+        """
+        # Extract text from all text parts in the message
+        message_text = self._extract_text_from_message(task.status.message)
+        
+        # Create prompt from message text
+        messages = [
+            {"role": "system", "content": f"You are {self.name}, {self.description}. Be concise and efficient in your responses."}
+        ]
+        
+        # Add the user's message
+        messages.append({"role": "user", "content": message_text})
+        
+        # Generate response
+        response_text = self.model.generate_text(messages, temperature=0.5, max_tokens=300)
+        
+        # Create A2A message with response
+        response_message = self.create_a2a_message(
+            role=MessageRole.AGENT,
+            text_content=response_text
+        )
+        
+        # Create artifact with the response
+        artifact = Artifact(
+            name="response",
+            description="Generated response",
+            parts=[TextPart(text=response_text)],
+            index=0
+        )
+        
+        # Update task with response
+        task = self.update_task_status(
+            task_id=task.id, 
+            state=TaskState.COMPLETED,
+            message=response_message
+        )
+        
+        # Add artifact to task
+        self.add_task_artifact(task.id, artifact)
+        
+        return task
+    
+    def _extract_text_from_message(self, message: schemas.base.Message) -> str:
+        """Extract text content from all text parts in a message."""
+        text_parts = []
+        
+        for part in message.parts:
+            if part.type == ContentType.TEXT:
+                text_parts.append(part.text)
+        
+        return "\n".join(text_parts) if text_parts else "No text content provided."
+    
     def generate_response(self, message: Message) -> Message:
-        """Generate a response using the GPT-O3 Mini model."""
+        """Generate a response using the GPT-O3 Mini model (legacy format)."""
         prompt = self._format_prompt_from_message(message)
         
         # Convert conversation history to OpenAI format
@@ -131,3 +286,29 @@ class GPTO3MiniAgent(BaseAgent):
                 return content.value
         
         return "Please provide a text message."
+    
+    def _get_agent_skills(self) -> List[dict]:
+        """Get the skills supported by this agent for the A2A protocol."""
+        return [
+            {
+                "id": "answer_questions",
+                "name": "Question Answering",
+                "description": "Answer factual questions efficiently",
+                "inputModes": ["text"],
+                "outputModes": ["text"]
+            },
+            {
+                "id": "summarize_text",
+                "name": "Text Summarization",
+                "description": "Create concise summaries of longer texts",
+                "inputModes": ["text"],
+                "outputModes": ["text"]
+            },
+            {
+                "id": "basic_reasoning",
+                "name": "Basic Reasoning",
+                "description": "Perform straightforward reasoning tasks",
+                "inputModes": ["text"],
+                "outputModes": ["text"]
+            }
+        ]

@@ -1,24 +1,28 @@
 from models.openai_model import OpenAIModel
 
 class GPT45Model(OpenAIModel):
-    """Wrapper for GPT-4.5 model"""
+    """Wrapper for GPT-4.5 model (Azure: gpt-4-turbo)"""
     
     def __init__(self):
-        super().__init__(model_name="gpt-4.5-preview", config_prefix="GPT45")
+        # Changed model name to gpt-4-turbo which is Azure compatible
+        # gpt-4.5-preview is automatically mapped to gpt-4-turbo deployment
+        super().__init__(model_name="gpt-4-turbo", config_prefix="GPT45")
         self.capabilities = ["text_generation", "function_calling", "advanced_reasoning"]
-        self.description = "GPT-4.5 is a large language model with advanced reasoning capabilities."
+        self.description = "GPT-4 Turbo is a large language model with advanced reasoning capabilities."
         
     def get_capabilities(self):
         return self.capabilities
         
 
 class GPTO3MiniModel(OpenAIModel):
-    """Wrapper for GPT-O3 Mini model"""
+    """Wrapper for GPT-O3 Mini model (Azure: gpt-35-turbo)"""
     
     def __init__(self):
-        super().__init__(model_name="gpt-o3-mini", config_prefix="O3_MINI")
+        # Changed model name to gpt-35-turbo which is Azure compatible
+        # gpt-o3-mini is automatically mapped to gpt-35-turbo deployment
+        super().__init__(model_name="gpt-35-turbo", config_prefix="O3_MINI")
         self.capabilities = ["text_generation", "function_calling", "efficient_processing"]
-        self.description = "GPT-O3 Mini is a compact, efficient language model for lighter workloads."
+        self.description = "GPT-3.5 Turbo is a compact, efficient language model for lighter workloads."
         
     def get_capabilities(self):
         return self.capabilities
