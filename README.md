@@ -1,6 +1,6 @@
 # Agent-to-Agent (A2A) Protocol Demo
 
-This project demonstrates a simple implementation of the Google Agent-to-Agent (A2A) protocol using OpenAI's GPT-4.5 and GPT-O3 Mini models.
+This project demonstrates a simple implementation of the Google Agent-to-Agent (A2A) protocol using Azure OpenAI's GPT-4.5 and GPT-O3 Mini models.
 
 ## Overview
 
@@ -9,10 +9,11 @@ The Agent-to-Agent (A2A) protocol is a standardized communication protocol that 
 ## Features
 
 - Implementation of core A2A protocol components
-- Demo of two agents (powered by GPT-4.5 and GPT-O3 Mini) communicating
+- Demo of two agents (powered by GPT-4.5 and GPT-O3 Mini) communicating through Azure OpenAI
 - Advanced demo with function calling capabilities
 - Structured message format following A2A standards
 - Conversation management between multiple agents
+- Graceful fallback to mock implementations when Azure credentials are unavailable
 
 ## Project Structure
 
@@ -21,7 +22,7 @@ The Agent-to-Agent (A2A) protocol is a standardized communication protocol that 
 │   ├── base_agent.py        # Base agent class
 │   └── model_agents.py      # Model-specific agent implementations
 ├── models/                  # Model wrappers
-│   ├── openai_model.py      # Base OpenAI model wrapper
+│   ├── openai_model.py      # Base OpenAI model wrapper (with Azure OpenAI integration)
 │   └── model_implementations.py  # Specific model implementations
 ├── schemas/                 # A2A protocol schemas
 │   └── base.py              # Core schema definitions
@@ -44,7 +45,7 @@ The Agent-to-Agent (A2A) protocol is a standardized communication protocol that 
 pip install -r requirements.txt
 ```
 
-3. Configure your `.env` file with your OpenAI API keys:
+3. Configure your `.env` file with your Azure OpenAI API keys:
 
 ```
 # Azure OpenAI GPT 4.5 Configuration
@@ -60,6 +61,20 @@ AZURE_OPENAI_KEY_O3_MINI="your-api-key-here"
 AZURE_OPENAI_MODEL_O3_MINI="gpt-o3-mini"
 AZURE_OPENAI_DEPLOYMENT_O3_MINI="gpt-o3-mini"
 ```
+
+## Azure OpenAI Integration
+
+This demo uses the Azure OpenAI service to access GPT-4.5 and GPT-O3 Mini models. The implementation:
+
+1. Automatically connects to your Azure OpenAI deployments using the credentials in your `.env` file
+2. Uses deployments specified by the `AZURE_OPENAI_DEPLOYMENT_*` environment variables
+3. Gracefully falls back to mock implementations if Azure OpenAI credentials are missing or invalid
+4. Uses the official OpenAI Python library with Azure-specific configurations
+
+Key parameters for Azure OpenAI:
+- Uses `max_completion_tokens` instead of `max_tokens`
+- Removes `temperature` parameter which is unsupported in these models
+- Properly formats function calling using the tools API format
 
 ## Running the Demos
 
@@ -142,12 +157,24 @@ You can extend this demo by:
 - Creating a web interface for visualization
 - Adding support for more content types (images, audio, etc.)
 - Implementing A2A protocol extensions
+- Integrating with additional Azure AI services
+
+## Troubleshooting
+
+Common Azure OpenAI integration issues:
+
+1. **Authentication Errors**: Ensure your API keys and endpoints in the `.env` file are correct
+2. **Deployment Errors**: Verify your deployments are active and named correctly in the `.env` file
+3. **Parameter Errors**: Azure OpenAI may have different parameter requirements than standard OpenAI API
+4. **Quota Limits**: Check your Azure OpenAI quota limits if you experience request failures
+5. **API Version**: Make sure the `AZURE_OPENAI_API_VERSION` is compatible with your deployments
 
 ## Resources
 
 - [Google Agent-to-Agent Protocol](https://github.com/google/A2A)
 - [Google A2A Documentation](https://google.github.io/A2A/)
-- [OpenAI API Documentation](https://platform.openai.com/docs/api-reference)
+- [Azure OpenAI Service Documentation](https://learn.microsoft.com/azure/ai-services/openai/)
+- [OpenAI Python Library](https://github.com/openai/openai-python)
 
 ## License
 

@@ -46,8 +46,8 @@ class GPT45Agent(BaseAgent):
                 if content.type == ContentType.TEXT:
                     messages.append({"role": role, "content": content.value})
         
-        # Generate the response
-        response_text = self.model.generate_text(messages, temperature=0.7)
+        # Generate the response - removed temperature parameter
+        response_text = self.model.generate_text(messages)
         
         # Create and return a new message
         return self.create_message(
@@ -112,8 +112,8 @@ class GPTO3MiniAgent(BaseAgent):
                 if content.type == ContentType.TEXT:
                     messages.append({"role": role, "content": content.value})
         
-        # Generate the response
-        response_text = self.model.generate_text(messages, temperature=0.5, max_tokens=300)
+        # Generate the response - removed temperature parameter, keeping max_tokens
+        response_text = self.model.generate_text(messages, max_tokens=300)
         
         # Create and return a new message
         return self.create_message(

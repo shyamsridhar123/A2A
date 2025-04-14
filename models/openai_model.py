@@ -4,7 +4,7 @@ import random
 from typing import Dict, List, Optional, Any, Union
 from dotenv import load_dotenv
 
-
+# Keep the mock classes for fallback/testing purposes
 class MockCompletionResponse:
     """Mock response for development purposes to avoid API calls"""
     def __init__(self, content):
@@ -27,7 +27,7 @@ class MockCompletionResult:
 
 class MockChatCompletions:
     """Mock chat completions class"""
-    def create(self, model, messages, temperature=0.7, max_tokens=500, **kwargs):
+    def create(self, model=None, messages=None, temperature=0.7, max_tokens=500, **kwargs):
         """Mock create method that returns predefined responses based on the input"""
         # Extract the last message content if available
         last_message = None
@@ -114,28 +114,40 @@ class OpenAIModel:
         self.model_name = model_name
         self.api_version = os.getenv("AZURE_OPENAI_API_VERSION", "2025-03-01-preview")
         
-        # Use mock client for demo purposes
-        self.client = MockAzureOpenAI()
-        print(f"Using mock OpenAI client for {model_name} (for demo purposes)")
+        try:
+            # Import the OpenAI library which supports both OpenAI and Azure OpenAI
+            from openai import AzureOpenAI
+            
+            # Initialize client with Azure OpenAI settings
+            self.client = AzureOpenAI(
+                api_key=self.api_key,
+                api_version=self.api_version,
+                azure_endpoint=self.endpoint
+            )
+            print(f"Initialized Azure OpenAI client for {model_name} using deployment {self.deployment}")
+        except (ImportError, Exception) as e:
+            # Fall back to mock client if there's an error
+            print(f"Warning: Failed to initialize Azure OpenAI client: {str(e)}")
+            print(f"Using mock OpenAI client for {model_name} instead")
+            self.client = MockAzureOpenAI()
     
-    def generate_text(self, messages: List[Dict[str, str]], temperature: float = 0.7, max_tokens: int = 500) -> str:
+    def generate_text(self, messages: List[Dict[str, str]], max_tokens: int = 500) -> str:
         """
         Generate text using the OpenAI model.
         
         Args:
             messages: List of message dictionaries with "role" and "content" keys
-            temperature: Controls randomness (0-1)
             max_tokens: Maximum number of tokens to generate
             
         Returns:
             The generated text response
         """
         try:
+            # Only pass parameters that are supported by the API
             response = self.client.chat.completions.create(
-                model=self.deployment,
+                model=self.deployment,  # Use deployment name for Azure OpenAI
                 messages=messages,
-                temperature=temperature,
-                max_tokens=max_tokens
+                max_completion_tokens=max_tokens
             )
             return response.choices[0].message.content
         except Exception as e:
@@ -145,8 +157,7 @@ class OpenAIModel:
     def generate_with_function_calling(
         self, 
         messages: List[Dict[str, str]], 
-        functions: List[Dict[str, Any]], 
-        temperature: float = 0.7
+        functions: List[Dict[str, Any]]
     ) -> Dict[str, Any]:
         """
         Generate text with function calling capability.
@@ -154,29 +165,38 @@ class OpenAIModel:
         Args:
             messages: List of message dictionaries
             functions: List of function definitions
-            temperature: Controls randomness (0-1)
             
         Returns:
             Dict containing the response or function call
         """
         try:
-            # For mock implementation, randomly decide whether to return a function call or a message
-            if random.random() > 0.5 and functions:
-                function = random.choice(functions)
+            # Convert functions to tools format for newer API
+            tools = [{"type": "function", "function": func} for func in functions]
+            
+            # Only pass parameters that are supported by the API
+            response = self.client.chat.completions.create(
+                model=self.deployment,  # Use deployment name for Azure OpenAI
+                messages=messages,
+                tools=tools
+            )
+            
+            message = response.choices[0].message
+            
+            # Check if there's a tool call
+            if message.tool_calls and len(message.tool_calls) > 0:
+                tool_call = message.tool_calls[0]
+                function_name = tool_call.function.name
+                arguments = json.loads(tool_call.function.arguments)
+                
                 return {
                     "type": "function_call",
-                    "function_name": function["name"],
-                    "arguments": {"query": "mock argument"}
+                    "function_name": function_name,
+                    "arguments": arguments
                 }
             else:
-                response = self.client.chat.completions.create(
-                    model=self.deployment,
-                    messages=messages,
-                    temperature=temperature
-                )
                 return {
                     "type": "message",
-                    "content": response.choices[0].message.content
+                    "content": message.content
                 }
                 
         except Exception as e:

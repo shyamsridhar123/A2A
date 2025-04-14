@@ -11,6 +11,11 @@ from agents.model_agents import GPT45Agent, GPTO3MiniAgent
 from utils.conversation import ConversationManager
 from schemas.base import ContentType
 
+# Add debug printing to check environment variables
+print("Debug: Environment variables loaded")
+print(f"Debug: GPT45 Endpoint: {os.getenv('AZURE_OPENAI_ENDPOINT_GPT45', 'Not found')}")
+print(f"Debug: O3_MINI Endpoint: {os.getenv('AZURE_OPENAI_ENDPOINT_O3_MINI', 'Not found')}")
+
 
 def print_formatted_message(message, max_width=80):
     """Print a formatted message with line wrapping at word boundaries."""
