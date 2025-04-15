@@ -1,8 +1,8 @@
 # 🤝 Agent-to-Agent (A2A) Protocol Demo
 
-![Protocol](https://img.shields.io/badge/Protocol-Google_A2A-4285F4)
-![Models](https://img.shields.io/badge/Models-Azure_OpenAI-0078D4)
-![License](https://img.shields.io/badge/License-MIT-green)
+[![Protocol](https://img.shields.io/badge/Protocol-Google_A2A-4285F4)](https://github.com/google/A2A)
+[![Models](https://img.shields.io/badge/Models-Azure_OpenAI-0078D4)](https://learn.microsoft.com/en-us/azure/ai-services/openai/)
+[![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
 This project demonstrates an implementation of the Google Agent-to-Agent (A2A) protocol using Azure OpenAI models GPT 4.1, GPT-4.5 and GPT-O3 Mini.
 
@@ -219,23 +219,9 @@ MCP follows a client-server architecture where:
    - **A2A**: More complex with multi-agent orchestration, skill discovery, and task management
    - **MCP**: Focused on creating standardized connections to data sources and tools for LLM context
 
-### 🚦 When to Use Each Protocol
-
-- **🤝 Use A2A when**:  
-  - You need multiple specialized agents to collaborate on complex tasks
-  - Your system requires orchestration of different agent capabilities
-  - You need asynchronous workflows between multiple agents
-  - You're designing a system with delegation between specialized agents
-
-- **🔌 Use MCP when**:  
-  - You need to standardize how your application connects LLMs to data sources
-  - You want a consistent interface for tool usage across different LLMs
-  - Your focus is on enhancing a single LLM with rich context
-  - You're building IDE plugins or desktop applications that access local data
-
 ### 🔄 Potential for Integration
 
-![Integration](https://img.shields.io/badge/Integration-Complementary_Protocols-8A2BE2)
+[![Integration](https://img.shields.io/badge/Integration-Complementary_Protocols-8A2BE2)](https://modelcontextprotocol.io)
 
 A complementary approach might integrate both protocols:
 - Use **🔌 MCP** for providing context and tools to individual agents (standardizing the data/tool connections)
