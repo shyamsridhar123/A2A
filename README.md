@@ -4,7 +4,7 @@
 [![Models](https://img.shields.io/badge/Models-Azure_OpenAI-0078D4)](https://learn.microsoft.com/en-us/azure/ai-services/openai/)
 [![License](https://img.shields.io/badge/License-MIT-green)](LICENSE)
 
-This project demonstrates an implementation of the Google Agent-to-Agent (A2A) protocol using Azure OpenAI models GPT 4.1, GPT-4.5 and GPT-O3 Mini.
+This project demonstrates an implementation of the Google Agent-to-Agent (A2A) protocol using Azure OpenAI models GPT 4.1, GPT-4.5 and o3-Mini.
 
 ## 📋 Overview
 
@@ -173,7 +173,7 @@ This implementation specifically integrates with Azure OpenAI services to provid
 - 🔒 Secure access to powerful AI models hosted in Azure
 - 🌎 Regional availability and data residency compliance
 - 🏢 Enterprise-grade reliability and scalability
-- 🧠 Support for multiple Azure OpenAI models (GPT-4.5, GPT-4.1, GPT-O3 Mini)
+- 🧠 Support for multiple Azure OpenAI models (GPT-4.5, GPT-4.1, o3-Mini)
 
 ## 🔄 Comparison with Model Context Protocol (MCP)
 
