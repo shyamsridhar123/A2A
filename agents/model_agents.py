@@ -3,7 +3,7 @@ import json
 import schemas.base
 
 from agents.base_agent import BaseAgent
-from models.model_implementations import GPT45Model, GPTO3MiniModel
+from models.model_implementations import GPT45Model, GPTO3MiniModel, GPT41Model
 from schemas.base import (
     LegacyMessage as Message, ContentType, Task, TaskState, 
     MessageRole, TextPart, DataPart, Artifact, TaskStatus
@@ -308,6 +308,145 @@ class GPTO3MiniAgent(BaseAgent):
                 "id": "basic_reasoning",
                 "name": "Basic Reasoning",
                 "description": "Perform straightforward reasoning tasks",
+                "inputModes": ["text"],
+                "outputModes": ["text"]
+            }
+        ]
+
+
+class GPT41Agent(BaseAgent):
+    """An agent powered by the GPT-4.1 model."""
+    
+    def __init__(self, id: str = None, name: str = None):
+        description = "A reasoning agent powered by GPT-4.1"
+        super().__init__(id, name or "GPT-4.1 Agent", description)
+        self.model = GPT41Model()
+        self.supported_functions = [
+            "basic_reasoning",
+            "text_analysis"
+        ]
+    
+    def _process_message(self, message: Message) -> None:
+        """Process an incoming legacy message using the GPT-4.1 model."""
+        print(f"GPT-4.1 Agent received: {message.id}")
+        for content in message.content:
+            if content.type == ContentType.TEXT:
+                print(f"Content: {content.value[:100]}...")
+    
+    def _process_task(self, task: Task) -> Optional[Task]:
+        """
+        Process a task according to the A2A protocol using the GPT-4.1 model.
+        
+        Args:
+            task: The task to process
+            
+        Returns:
+            The updated task, or None if no updates are needed
+        """
+        # Extract text from all text parts in the message
+        message_text = self._extract_text_from_message(task.status.message)
+        
+        # Create prompt from message text
+        messages = [
+            {"role": "system", "content": f"You are {self.name}, {self.description}. Provide clear and concise responses."}
+        ]
+        
+        # Add the user's message
+        messages.append({"role": "user", "content": message_text})
+        
+        # Generate response
+        response_text = self.model.generate_text(messages, temperature=0.6)
+        
+        # Create A2A message with response
+        response_message = self.create_a2a_message(
+            role=MessageRole.AGENT,
+            text_content=response_text
+        )
+        
+        # Create artifact with the response
+        artifact = Artifact(
+            name="response",
+            description="Generated response",
+            parts=[TextPart(text=response_text)],
+            index=0
+        )
+        
+        # Update task with response
+        task = self.update_task_status(
+            task_id=task.id, 
+            state=TaskState.COMPLETED,
+            message=response_message
+        )
+        
+        # Add artifact to task
+        self.add_task_artifact(task.id, artifact)
+        
+        return task
+    
+    def _extract_text_from_message(self, message: schemas.base.Message) -> str:
+        """Extract text content from all text parts in a message."""
+        text_parts = []
+        
+        for part in message.parts:
+            if part.type == ContentType.TEXT:
+                text_parts.append(part.text)
+        
+        return "\n".join(text_parts) if text_parts else "No text content provided."
+    
+    def generate_response(self, message: Message) -> Message:
+        """Generate a response using the GPT-4.1 model (legacy format)."""
+        prompt = self._format_prompt_from_message(message)
+        
+        # Convert conversation history to OpenAI format
+        messages = [
+            {"role": "system", "content": f"You are {self.name}, {self.description}. Provide clear and concise responses."}
+        ]
+        
+        # Add relevant conversation history (only a few for efficiency)
+        for msg in self.conversation_history[-3:]:  # Just use the last 3 messages for context
+            if msg.sender_id == self.id:
+                role = "assistant"
+            else:
+                role = "user"
+                
+            for content in msg.content:
+                if content.type == ContentType.TEXT:
+                    messages.append({"role": role, "content": content.value})
+        
+        # Generate the response
+        response_text = self.model.generate_text(messages, temperature=0.6)
+        
+        # Create and return a new message
+        return self.create_message(
+            recipient_id=message.sender_id,
+            content_value=response_text,
+            content_type=ContentType.TEXT,
+            in_reply_to=message.id
+        )
+    
+    def _format_prompt_from_message(self, message: Message) -> str:
+        """Format a prompt from a message for the GPT-4.1 model."""
+        # Similar to the GPT-4.5 agent but simpler for efficiency
+        for content in message.content:
+            if content.type == ContentType.TEXT:
+                return content.value
+        
+        return "Please provide a text message."
+    
+    def _get_agent_skills(self) -> List[dict]:
+        """Get the skills supported by this agent for the A2A protocol."""
+        return [
+            {
+                "id": "basic_reasoning",
+                "name": "Basic Reasoning",
+                "description": "Perform straightforward reasoning tasks",
+                "inputModes": ["text"],
+                "outputModes": ["text"]
+            },
+            {
+                "id": "text_analysis",
+                "name": "Text Analysis",
+                "description": "Analyze and interpret text data",
                 "inputModes": ["text"],
                 "outputModes": ["text"]
             }

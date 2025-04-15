@@ -277,9 +277,22 @@ class OpenAIModel:
                 # Only pass parameters that are explicitly supported
                 completion_kwargs = {
                     "messages": messages,
-                    "temperature": temperature,
-                    "max_tokens": max_tokens
                 }
+                
+                # Handle parameter compatibility for specific models
+                is_o3_mini = (hasattr(self, 'model_name') and self.model_name == "gpt-35-turbo") or \
+                            (hasattr(self, 'deployment') and self.deployment == "o3-mini")
+                            
+                # Handle max_tokens parameter compatibility
+                if is_o3_mini:
+                    # For GPT-4o-mini (gpt-35-turbo), use max_completion_tokens
+                    completion_kwargs["max_completion_tokens"] = max_tokens
+                    logger.debug(f"Using max_completion_tokens={max_tokens} for model: {getattr(self, 'deployment', self.model_name)}")
+                    # Note: o3-mini doesn't support temperature parameter in this version
+                else:
+                    # For other models, use regular parameters
+                    completion_kwargs["max_tokens"] = max_tokens
+                    completion_kwargs["temperature"] = temperature
                 
                 # For Azure, use deployment name as the model
                 if self.use_azure:

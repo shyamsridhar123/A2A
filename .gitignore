@@ -39,3 +39,6 @@ env/
 
 # Local development files
 .DS_Store
+
+# Log files
+*.log

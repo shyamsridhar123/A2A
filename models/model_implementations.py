@@ -14,6 +14,19 @@ class GPT45Model(OpenAIModel):
         return self.capabilities
         
 
+class GPT41Model(OpenAIModel):
+    """Wrapper for GPT-4.1 model (Azure: gpt-4-1106)"""
+    
+    def __init__(self):
+        # Using gpt-4-1106 which is the Azure model name for GPT-4.1
+        super().__init__(model_name="gpt-4-1106", config_prefix="GPT41")
+        self.capabilities = ["text_generation", "function_calling", "reasoning", "long_context"]
+        self.description = "GPT-4.1 is a large language model with strong reasoning and long context handling."
+        
+    def get_capabilities(self):
+        return self.capabilities
+        
+
 class GPTO3MiniModel(OpenAIModel):
     """Wrapper for GPT-O3 Mini model (Azure: gpt-35-turbo)"""
     
